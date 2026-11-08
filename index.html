@@ -7,7 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
-        /* Smooth transition for inputs */
         input { transition: all 0.2s ease-in-out; }
     </style>
 </head>
@@ -19,7 +18,8 @@
         <div class="bg-slate-800 rounded-2xl shadow-2xl p-6 md:p-8 border border-slate-700">
             <h2 class="text-3xl font-bold mb-8 text-center text-white tracking-wide">PFI Calculator</h2>
             
-            <form id="pfiForm" class="space-y-6">
+            <!-- Added onsubmit event to trigger validation properly -->
+            <form id="pfiForm" class="space-y-6" onsubmit="event.preventDefault(); calculatePFI();">
                 
                 <!-- Peak Readings -->
                 <div class="bg-slate-800/50 p-5 rounded-xl border-l-4 border-blue-500 shadow-inner">
@@ -66,7 +66,8 @@
                     </div>
                 </div>
 
-                <button type="button" onclick="calculatePFI()" class="w-full bg-blue-600 text-white font-bold py-4 px-4 rounded-xl hover:bg-blue-500 transition-colors shadow-lg text-lg mt-4">
+                <!-- Changed type from "button" to "submit" to enforce the 'required' attributes -->
+                <button type="submit" class="w-full bg-blue-600 text-white font-bold py-4 px-4 rounded-xl hover:bg-blue-500 transition-colors shadow-lg text-lg mt-4">
                     Calculate & Generate Receipt
                 </button>
             </form>
@@ -74,15 +75,12 @@
 
         <!-- Receipt Section -->
         <div id="receipt-container" class="hidden lg:block">
-            <!-- The specific element to be converted to PNG -->
             <div id="receipt-card" class="bg-slate-800 rounded-2xl shadow-2xl p-8 border border-slate-700 max-w-md mx-auto relative overflow-hidden">
                 
-                <!-- Decorative top bar -->
                 <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-emerald-500 to-purple-500"></div>
 
                 <div class="text-center mb-8 mt-2 border-b border-slate-700 pb-6">
                     <h2 class="text-3xl font-black text-white tracking-wide">DAILY PFI REPORT</h2>
-                    <!-- Increased size and prominent date/time -->
                     <p id="receipt-date" class="text-lg md:text-xl font-medium text-blue-300 mt-3"></p>
                 </div>
 
@@ -119,7 +117,6 @@
                 </div>
             </div>
 
-            <!-- Download Button (Outside the receipt card) -->
             <div class="max-w-md mx-auto mt-6">
                 <button onclick="downloadPNG()" class="w-full bg-emerald-600 text-white font-bold py-4 px-4 rounded-xl hover:bg-emerald-500 transition-colors flex items-center justify-center gap-3 shadow-lg text-lg">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
@@ -132,20 +129,27 @@
 
     <script>
         function calculatePFI() {
-            const pPeak = parseFloat(document.getElementById('prev_peak').value) || 0;
-            const cPeak = parseFloat(document.getElementById('curr_peak').value) || 0;
-            const pOff = parseFloat(document.getElementById('prev_offpeak').value) || 0;
-            const cOff = parseFloat(document.getElementById('curr_offpeak').value) || 0;
-            const pKvarh = parseFloat(document.getElementById('prev_kvarh').value) || 0;
-            const cKvarh = parseFloat(document.getElementById('curr_kvarh').value) || 0;
+            // Removed the || 0 fallback so we use exactly what is in the box
+            const pPeak = parseFloat(document.getElementById('prev_peak').value);
+            const cPeak = parseFloat(document.getElementById('curr_peak').value);
+            const pOff = parseFloat(document.getElementById('prev_offpeak').value);
+            const cOff = parseFloat(document.getElementById('curr_offpeak').value);
+            const pKvarh = parseFloat(document.getElementById('prev_kvarh').value);
+            const cKvarh = parseFloat(document.getElementById('curr_kvarh').value);
 
             const h24_peak = cPeak - pPeak;
             const h24_offpeak = cOff - pOff;
             const total_kwh = h24_peak + h24_offpeak;
             const total_kvarh = cKvarh - pKvarh;
 
+            // Extra safety check in case the user types letters instead of numbers
+            if (isNaN(h24_peak) || isNaN(h24_offpeak) || isNaN(total_kvarh)) {
+                alert("Please ensure all inputs are valid numbers.");
+                return;
+            }
+
             if (h24_peak < 0 || h24_offpeak < 0 || total_kvarh < 0) {
-                alert("Error: Current readings cannot be lower than previous readings.");
+                alert("Error: Current readings cannot be lower than previous readings. Check your meter numbers.");
                 return;
             }
 
@@ -156,7 +160,6 @@
                 pf = total_kwh / kvah;
             }
 
-            // Formatting Date and Time to be large and legible
             const now = new Date();
             const dateStr = now.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
             const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
@@ -172,7 +175,6 @@
             const pfElement = document.getElementById('rec_pf');
             pfElement.innerText = pf.toFixed(4);
 
-            // Conditional coloring for the PF output
             if (pf >= 0.95) {
                 pfElement.className = "text-5xl font-black text-emerald-400";
             } else if (pf > 0) {
@@ -181,11 +183,9 @@
                 pfElement.className = "text-5xl font-black text-slate-400";
             }
 
-            // Show Receipt smoothly
             const container = document.getElementById('receipt-container');
             container.classList.remove('hidden');
             
-            // Scroll to receipt on mobile
             if(window.innerWidth < 1024) {
                 setTimeout(() => {
                     container.scrollIntoView({ behavior: 'smooth' });
@@ -198,10 +198,9 @@
             
             html2canvas(receiptCard, {
                 scale: 2, 
-                backgroundColor: "#1e293b", // Matches tailwind bg-slate-800 to keep the dark theme seamless
+                backgroundColor: "#1e293b",
             }).then(canvas => {
                 const imgData = canvas.toDataURL("image/png");
-                
                 const link = document.createElement('a');
                 link.href = imgData;
                 
