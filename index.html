@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily PFI Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        /* Smooth transition for inputs */
+        input { transition: all 0.2s ease-in-out; }
+    </style>
+</head>
+<body class="bg-slate-900 min-h-screen p-4 md:p-8 font-sans text-slate-300 flex items-center justify-center">
+
+    <div class="max-w-5xl w-full mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+        
+        <!-- Calculator Form Section -->
+        <div class="bg-slate-800 rounded-2xl shadow-2xl p-6 md:p-8 border border-slate-700">
+            <h2 class="text-3xl font-bold mb-8 text-center text-white tracking-wide">PFI Calculator</h2>
+            
+            <form id="pfiForm" class="space-y-6">
+                
+                <!-- Peak Readings -->
+                <div class="bg-slate-800/50 p-5 rounded-xl border-l-4 border-blue-500 shadow-inner">
+                    <h3 class="font-bold text-blue-400 mb-4 text-sm uppercase tracking-wider">Peak Energy (kWh)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-base font-medium text-slate-300 mb-1">Previous</label>
+                            <input type="number" id="prev_peak" step="any" required class="block w-full rounded-lg border-slate-600 bg-slate-900 text-white p-3 border focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-base font-medium text-slate-300 mb-1">Current</label>
+                            <input type="number" id="curr_peak" step="any" required class="block w-full rounded-lg border-slate-600 bg-slate-900 text-white p-3 border focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Off-Peak Readings -->
+                <div class="bg-slate-800/50 p-5 rounded-xl border-l-4 border-emerald-500 shadow-inner">
+                    <h3 class="font-bold text-emerald-400 mb-4 text-sm uppercase tracking-wider">Off-Peak Energy (kWh)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-base font-medium text-slate-300 mb-1">Previous</label>
+                            <input type="number" id="prev_offpeak" step="any" required class="block w-full rounded-lg border-slate-600 bg-slate-900 text-white p-3 border focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-base font-medium text-slate-300 mb-1">Current</label>
+                            <input type="number" id="curr_offpeak" step="any" required class="block w-full rounded-lg border-slate-600 bg-slate-900 text-white p-3 border focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- kVArh Readings -->
+                <div class="bg-slate-800/50 p-5 rounded-xl border-l-4 border-purple-500 shadow-inner">
+                    <h3 class="font-bold text-purple-400 mb-4 text-sm uppercase tracking-wider">Total Reactive (kVArh)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label class="block text-base font-medium text-slate-300 mb-1">Previous</label>
+                            <input type="number" id="prev_kvarh" step="any" required class="block w-full rounded-lg border-slate-600 bg-slate-900 text-white p-3 border focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-base font-medium text-slate-300 mb-1">Current</label>
+                            <input type="number" id="curr_kvarh" step="any" required class="block w-full rounded-lg border-slate-600 bg-slate-900 text-white p-3 border focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none">
+                        </div>
+                    </div>
+                </div>
+
+                <button type="button" onclick="calculatePFI()" class="w-full bg-blue-600 text-white font-bold py-4 px-4 rounded-xl hover:bg-blue-500 transition-colors shadow-lg text-lg mt-4">
+                    Calculate & Generate Receipt
+                </button>
+            </form>
+        </div>
+
+        <!-- Receipt Section -->
+        <div id="receipt-container" class="hidden lg:block">
+            <!-- The specific element to be converted to PNG -->
+            <div id="receipt-card" class="bg-slate-800 rounded-2xl shadow-2xl p-8 border border-slate-700 max-w-md mx-auto relative overflow-hidden">
+                
+                <!-- Decorative top bar -->
+                <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-blue-500 via-emerald-500 to-purple-500"></div>
+
+                <div class="text-center mb-8 mt-2 border-b border-slate-700 pb-6">
+                    <h2 class="text-3xl font-black text-white tracking-wide">DAILY PFI REPORT</h2>
+                    <!-- Increased size and prominent date/time -->
+                    <p id="receipt-date" class="text-lg md:text-xl font-medium text-blue-300 mt-3"></p>
+                </div>
+
+                <div class="space-y-4 mb-8 text-base">
+                    <div class="flex justify-between border-b border-slate-700 border-dashed pb-2">
+                        <span class="text-slate-400">24h Peak kWh</span>
+                        <span id="rec_peak" class="font-bold text-white">0.00</span>
+                    </div>
+                    <div class="flex justify-between border-b border-slate-700 border-dashed pb-2">
+                        <span class="text-slate-400">24h Off-Peak kWh</span>
+                        <span id="rec_offpeak" class="font-bold text-white">0.00</span>
+                    </div>
+                    <div class="flex justify-between border-b border-slate-600 pb-2 font-semibold text-lg text-white mt-2">
+                        <span>Total 24h kWh</span>
+                        <span id="rec_total_kwh" class="text-blue-400">0.00</span>
+                    </div>
+                    <div class="flex justify-between border-b border-slate-700 border-dashed pb-2 pt-4">
+                        <span class="text-slate-400">Total 24h kVArh</span>
+                        <span id="rec_total_kvarh" class="font-bold text-white">0.00</span>
+                    </div>
+                    <div class="flex justify-between border-b border-slate-700 border-dashed pb-2">
+                        <span class="text-slate-400">Apparent Energy (kVAh)</span>
+                        <span id="rec_kvah" class="font-bold text-white">0.00</span>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-700 p-6 rounded-xl text-center mb-8 shadow-inner">
+                    <p class="text-sm font-bold text-slate-400 uppercase tracking-widest mb-2">24h Average Power Factor</p>
+                    <p id="rec_pf" class="text-5xl font-black text-emerald-400">0.0000</p>
+                </div>
+
+                <div class="text-center text-sm text-slate-500">
+                    Generated locally from meter data.
+                </div>
+            </div>
+
+            <!-- Download Button (Outside the receipt card) -->
+            <div class="max-w-md mx-auto mt-6">
+                <button onclick="downloadPNG()" class="w-full bg-emerald-600 text-white font-bold py-4 px-4 rounded-xl hover:bg-emerald-500 transition-colors flex items-center justify-center gap-3 shadow-lg text-lg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Download PNG Receipt
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function calculatePFI() {
+            const pPeak = parseFloat(document.getElementById('prev_peak').value) || 0;
+            const cPeak = parseFloat(document.getElementById('curr_peak').value) || 0;
+            const pOff = parseFloat(document.getElementById('prev_offpeak').value) || 0;
+            const cOff = parseFloat(document.getElementById('curr_offpeak').value) || 0;
+            const pKvarh = parseFloat(document.getElementById('prev_kvarh').value) || 0;
+            const cKvarh = parseFloat(document.getElementById('curr_kvarh').value) || 0;
+
+            const h24_peak = cPeak - pPeak;
+            const h24_offpeak = cOff - pOff;
+            const total_kwh = h24_peak + h24_offpeak;
+            const total_kvarh = cKvarh - pKvarh;
+
+            if (h24_peak < 0 || h24_offpeak < 0 || total_kvarh < 0) {
+                alert("Error: Current readings cannot be lower than previous readings.");
+                return;
+            }
+
+            const kvah = Math.sqrt(Math.pow(total_kwh, 2) + Math.pow(total_kvarh, 2));
+            
+            let pf = 0;
+            if(kvah > 0) {
+                pf = total_kwh / kvah;
+            }
+
+            // Formatting Date and Time to be large and legible
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
+            const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+            
+            document.getElementById('receipt-date').innerHTML = `${dateStr} <br> <span class="text-white font-bold">${timeStr}</span>`;
+            
+            document.getElementById('rec_peak').innerText = h24_peak.toFixed(2);
+            document.getElementById('rec_offpeak').innerText = h24_offpeak.toFixed(2);
+            document.getElementById('rec_total_kwh').innerText = total_kwh.toFixed(2);
+            document.getElementById('rec_total_kvarh').innerText = total_kvarh.toFixed(2);
+            document.getElementById('rec_kvah').innerText = kvah.toFixed(2);
+            
+            const pfElement = document.getElementById('rec_pf');
+            pfElement.innerText = pf.toFixed(4);
+
+            // Conditional coloring for the PF output
+            if (pf >= 0.95) {
+                pfElement.className = "text-5xl font-black text-emerald-400";
+            } else if (pf > 0) {
+                pfElement.className = "text-5xl font-black text-red-400";
+            } else {
+                pfElement.className = "text-5xl font-black text-slate-400";
+            }
+
+            // Show Receipt smoothly
+            const container = document.getElementById('receipt-container');
+            container.classList.remove('hidden');
+            
+            // Scroll to receipt on mobile
+            if(window.innerWidth < 1024) {
+                setTimeout(() => {
+                    container.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+            }
+        }
+
+        function downloadPNG() {
+            const receiptCard = document.getElementById('receipt-card');
+            
+            html2canvas(receiptCard, {
+                scale: 2, 
+                backgroundColor: "#1e293b", // Matches tailwind bg-slate-800 to keep the dark theme seamless
+            }).then(canvas => {
+                const imgData = canvas.toDataURL("image/png");
+                
+                const link = document.createElement('a');
+                link.href = imgData;
+                
+                const dateISO = new Date().toISOString().slice(0, 10);
+                link.download = `PFI_Report_${dateISO}.png`;
+                
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+        }
+    </script>
+</body>
+</html>
